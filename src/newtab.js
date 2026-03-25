@@ -31,6 +31,10 @@ const greetingEl = document.getElementById('greeting');
 const clockEl = document.getElementById('clock');
 const settingsBtn = document.getElementById('settings-btn');
 const refreshBtn = document.getElementById('refresh-btn');
+const settingsPopup = document.getElementById('settings-popup');
+const popupNicknameInput = document.getElementById('popup-nickname');
+const popupNicknameCount = document.getElementById('popup-nickname-count');
+const popupSaveBtn = document.getElementById('popup-save-btn');
 
 // ── Clock & Greeting ─────────────────────────────────────────────────────────
 
@@ -156,6 +160,51 @@ async function initPhoto() {
   showPhoto(photos[Math.min(idx, photos.length - 1)]);
 }
 
+// ── Settings popup ───────────────────────────────────────────────────────────
+
+function openSettingsPopup() {
+  popupNicknameInput.value = localStorage.getItem('user_nickname') || '';
+  popupNicknameCount.textContent = `${popupNicknameInput.value.trim().slice(0, 8).length}/8`;
+  settingsPopup.hidden = false;
+  popupNicknameInput.focus();
+}
+
+function closeSettingsPopup() {
+  settingsPopup.hidden = true;
+}
+
+settingsBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (settingsPopup.hidden) {
+    openSettingsPopup();
+  } else {
+    closeSettingsPopup();
+  }
+});
+
+popupNicknameInput.addEventListener('input', () => {
+  popupNicknameCount.textContent = `${popupNicknameInput.value.trim().slice(0, 8).length}/8`;
+});
+
+popupSaveBtn.addEventListener('click', () => {
+  const nickname = popupNicknameInput.value.trim().slice(0, 8);
+  localStorage.setItem('user_nickname', nickname);
+  updateGreeting();
+  closeSettingsPopup();
+});
+
+popupNicknameInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') popupSaveBtn.click();
+  if (e.key === 'Escape') closeSettingsPopup();
+});
+
+// Close popup when clicking outside of it
+document.addEventListener('click', (e) => {
+  if (!settingsPopup.hidden && !settingsPopup.contains(e.target) && !settingsBtn.contains(e.target)) {
+    closeSettingsPopup();
+  }
+});
+
 // ── Buttons ──────────────────────────────────────────────────────────────────
 
 refreshBtn.addEventListener('click', async () => {
@@ -164,10 +213,6 @@ refreshBtn.addEventListener('click', async () => {
   const next = advanceIndex(photos);
   // Small delay so the fade-out is visible
   setTimeout(() => showPhoto(photos[next]), 150);
-});
-
-settingsBtn.addEventListener('click', () => {
-  browser.runtime.openOptionsPage();
 });
 
 // ── Bootstrap ────────────────────────────────────────────────────────────────
