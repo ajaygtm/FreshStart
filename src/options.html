@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fresh Start – Settings</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="card">
+      <h1 class="card-title">✨ Fresh Start Settings</h1>
+
+      <!-- Nickname -->
+      <div class="field-group">
+        <label for="nickname" class="field-label">Nickname</label>
+        <div class="input-row">
+          <input
+            type="text"
+            id="nickname"
+            class="input"
+            maxlength="8"
+            placeholder="e.g. Alex"
+            autocomplete="off"
+          />
+          <span id="nickname-count" class="char-count">0/8</span>
+        </div>
+        <p class="field-info">Shown in the greeting on your new tab. Maximum 8 characters.</p>
+      </div>
+
+      <!-- API Key -->
+      <div class="field-group">
+        <label for="api-key" class="field-label">
+          Unsplash API Key
+          <a
+            href="https://unsplash.com/developers"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="link"
+          >Get a free key ↗</a>
+        </label>
+        <div class="input-row">
+          <input
+            type="password"
+            id="api-key"
+            class="input"
+            placeholder="YOUR_UNSPLASH_ACCESS_KEY_HERE"
+            autocomplete="off"
+          />
+          <button id="toggle-key" class="toggle-btn" type="button">Show</button>
+        </div>
+        <p class="field-info">Used to fetch beautiful background photos. Without a key, curated fallback photos are displayed.</p>
+      </div>
+
+      <!-- Actions -->
+      <div class="actions">
+        <button id="clear-cache-btn" class="btn btn-secondary" type="button">
+          Clear Cache &amp; Refresh Photos
+        </button>
+        <button id="save-btn" class="btn btn-primary" type="button">
+          Save Settings
+        </button>
+      </div>
+
+      <p id="status" class="status" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

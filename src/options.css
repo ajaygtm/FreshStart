@@ -1,0 +1,215 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  min-height: 100%;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  color: #1e1e2e;
+}
+
+/* ── Page ────────────────────────────────────────────────── */
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  background: linear-gradient(135deg, #6e48aa 0%, #9d50bb 40%, #4776e6 100%);
+}
+
+/* ── Card ────────────────────────────────────────────────── */
+.card {
+  background: #ffffff;
+  border-radius: 1.25rem;
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  animation: slide-up 0.35s ease;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #3a1f6e;
+  margin-bottom: 2rem;
+  text-align: center;
+  letter-spacing: -0.01em;
+}
+
+/* ── Fields ──────────────────────────────────────────────── */
+.field-group {
+  margin-bottom: 1.5rem;
+}
+
+.field-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #4a4a6a;
+  margin-bottom: 0.4rem;
+}
+
+.link {
+  color: #7c4dff;
+  text-decoration: none;
+  font-weight: 400;
+  font-size: 0.8rem;
+  margin-left: auto;
+  transition: color 0.2s;
+}
+
+.link:hover {
+  color: #5c2de0;
+  text-decoration: underline;
+}
+
+.input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.input {
+  flex: 1;
+  padding: 0.625rem 0.875rem;
+  border: 1.5px solid #ddd;
+  border-radius: 0.6rem;
+  font-size: 0.95rem;
+  color: #1e1e2e;
+  background: #fafafa;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.input:focus {
+  border-color: #7c4dff;
+  box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.15);
+  background: #fff;
+}
+
+.char-count {
+  font-size: 0.78rem;
+  color: #999;
+  white-space: nowrap;
+  min-width: 2.8rem;
+  text-align: right;
+}
+
+.toggle-btn {
+  padding: 0.625rem 0.875rem;
+  background: #f0ebff;
+  color: #7c4dff;
+  border: 1.5px solid #cbb8ff;
+  border-radius: 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.toggle-btn:hover {
+  background: #e0d5ff;
+  border-color: #7c4dff;
+}
+
+.field-info {
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: #888;
+  line-height: 1.4;
+}
+
+/* ── Actions ─────────────────────────────────────────────── */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+.btn {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #7c4dff, #4776e6);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(124, 77, 255, 0.4);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 6px 20px rgba(124, 77, 255, 0.55);
+}
+
+.btn-secondary {
+  background: #f4f1ff;
+  color: #6236ff;
+  border: 1.5px solid #d4c5ff;
+}
+
+.btn-secondary:hover {
+  background: #ebe5ff;
+}
+
+/* ── Status message ──────────────────────────────────────── */
+.status {
+  margin-top: 1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: center;
+  min-height: 1.2rem;
+  transition: opacity 0.3s;
+}
+
+.status.success {
+  color: #2e7d32;
+}
+
+.status.error {
+  color: #c62828;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .card {
+    padding: 2rem 1.25rem;
+  }
+
+  .card-title {
+    font-size: 1.3rem;
+  }
+
+  .actions {
+    margin-top: 1.5rem;
+  }
+}

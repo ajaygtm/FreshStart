@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Fresh Start",
+  "version": "1.0.0",
+  "description": "A serene Firefox new tab extension with personalized greetings and beautiful cached photos.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://api.unsplash.com/*"
+  ],
+  "chrome_url_overrides": {
+    "newtab": "src/newtab.html"
+  },
+  "options_ui": {
+    "page": "src/options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "16": "assets/icons/icon-16.png",
+    "48": "assets/icons/icon-48.png",
+    "128": "assets/icons/icon-128.png"
+  }
+}
