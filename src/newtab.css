@@ -12,6 +12,16 @@ html, body {
   background: #1a1a2e;
 }
 
+/* ── CUSTOMIZE HERE – Button size ───────────────────────────── */
+:root {
+  --button-size: 60px;
+
+  /* ── CUSTOMIZE HERE – Greeting font ────────────────────────── */
+  --greeting-font-size: clamp(1.1rem, 3vw, 1.75rem);
+  --greeting-font-weight: 300;
+  --greeting-letter-spacing: 0.08em;
+}
+
 /* ── Background ─────────────────────────────────────────── */
 .background {
   position: fixed;
@@ -54,9 +64,9 @@ html, body {
 
 .greeting {
   color: rgba(255, 255, 255, 0.92);
-  font-size: clamp(1.1rem, 3vw, 1.75rem);
-  font-weight: 300;
-  letter-spacing: 0.08em;
+  font-size: var(--greeting-font-size);
+  font-weight: var(--greeting-font-weight);
+  letter-spacing: var(--greeting-letter-spacing);
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
 }
 
@@ -72,25 +82,23 @@ html, body {
 /* ── Icon buttons ────────────────────────────────────────── */
 .icon-btn {
   position: fixed;
-  width: 48px;
-  height: 48px;
+  width: var(--button-size);
+  height: var(--button-size);
   border: none;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: transparent;
   cursor: pointer;
-  font-size: 1.25rem;
+  font-size: 1.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.25s ease, transform 0.2s ease;
+  transition: transform 0.2s ease, filter 0.2s ease;
   z-index: 100;
 }
 
 .icon-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: scale(1.1);
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.5));
 }
 
 .icon-btn:active {
@@ -107,11 +115,98 @@ html, body {
   right: 1.25rem;
 }
 
+/* ── Settings dropdown popup ─────────────────────────────── */
+.settings-popup {
+  position: fixed;
+  top: calc(1.25rem + var(--button-size) + 0.5rem);
+  right: 1.25rem;
+  z-index: 200;
+}
+
+.settings-popup[hidden] {
+  display: none;
+}
+
+.settings-popup-inner {
+  background: rgba(15, 15, 30, 0.65);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 180px;
+}
+
+.popup-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.popup-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.popup-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.55rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+  min-width: 0;
+}
+
+.popup-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.popup-input:focus {
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+.popup-char-count {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.popup-save-btn {
+  align-self: flex-end;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.82rem;
+  padding: 0.3rem 0.9rem;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.popup-save-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.popup-save-btn:active {
+  transform: scale(0.96);
+}
+
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 480px) {
+  :root {
+    --button-size: 48px;
+  }
+
   .icon-btn {
-    width: 40px;
-    height: 40px;
-    font-size: 1rem;
+    font-size: 1.4rem;
   }
 }
