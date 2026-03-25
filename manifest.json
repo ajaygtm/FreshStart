@@ -4,10 +4,13 @@
   "version": "1.0.0",
   "description": "A serene Firefox new tab extension with personalized greetings and beautiful cached photos.",
   "permissions": [
-    "storage"
+    "storage",
+    "geolocation"
   ],
   "host_permissions": [
-    "https://api.unsplash.com/*"
+    "https://api.unsplash.com/*",
+    "https://api.open-meteo.com/*",
+    "https://api.bigdatacloud.net/*"
   ],
   "chrome_url_overrides": {
     "newtab": "src/newtab.html"
