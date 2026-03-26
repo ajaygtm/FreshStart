@@ -2,14 +2,16 @@
  * Fresh Start – New Tab Script
  *
  * localStorage keys
- *   cached_photos        JSON array of photo URLs
- *   last_refresh         Unix timestamp (ms) of last API fetch
- *   current_photo_index  Index of the currently displayed photo
- *   user_nickname        User's display name (max 8 chars)
- *   unsplash_api_key     Unsplash access key
- *   user_location        {latitude, longitude} from Geolocation API
- *   cached_weather       {temperature, weather_code, location_name}
- *   last_weather_update  Unix timestamp (ms) of last weather fetch
+ *   cached_photos           JSON array of {url, author, authorUrl} objects
+ *   last_refresh            Unix timestamp (ms) of last API fetch
+ *   current_photo_index     Index of the currently displayed photo
+ *   user_nickname           User's display name (max 8 chars)
+ *   unsplash_api_key        Unsplash access key
+ *   unsplash_collection_id  Optional Unsplash collection ID
+ *   user_location           {latitude, longitude} from Geolocation API
+ *   cached_weather          {temperature, weather_code, location_name}
+ *   last_weather_update     Unix timestamp (ms) of last weather fetch
+ *   user_todos              JSON array of {id, text, completed, created_at}
  */
 
 'use strict';
@@ -21,14 +23,17 @@ const WEATHER_CACHE_DURATION_MS = 60 * 60 * 1000; // 1 hour
 const TEMPERATURE_UNIT = 'fahrenheit'; // change to 'celsius' if preferred
 const PHOTO_COUNT = 3;
 const UNSPLASH_ENDPOINT = 'https://api.unsplash.com/photos/random';
+const UNSPLASH_COLLECTION_ENDPOINT = 'https://api.unsplash.com/collections';
+const COLLECTION_PHOTO_COUNT = 20;
 const IMG_PARAMS = '?w=1920&h=1080&fit=crop';
 const OPEN_METEO_ENDPOINT = 'https://api.open-meteo.com/v1/forecast';
 const REVERSE_GEOCODE_ENDPOINT = 'https://api.bigdatacloud.net/data/reverse-geocode-client';
 
+// Each photo is stored as {url, author, authorUrl} – author/authorUrl are null for fallbacks
 const FALLBACK_PHOTOS = [
-  'https://images.unsplash.com/photo-1470770841072-f978cf4d019e' + IMG_PARAMS,
-  'https://images.unsplash.com/photo-1501854140801-50d01698950b' + IMG_PARAMS,
-  'https://images.unsplash.com/photo-1441974231531-c6227db76b6e' + IMG_PARAMS,
+  { url: 'https://images.unsplash.com/photo-1470770841072-f978cf4d019e' + IMG_PARAMS, author: null, authorUrl: null },
+  { url: 'https://images.unsplash.com/photo-1501854140801-50d01698950b' + IMG_PARAMS, author: null, authorUrl: null },
+  { url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e' + IMG_PARAMS, author: null, authorUrl: null },
 ];
 
 // ── DOM references ───────────────────────────────────────────────────────────
@@ -42,7 +47,16 @@ const refreshBtn = document.getElementById('refresh-btn');
 const settingsPopup = document.getElementById('settings-popup');
 const popupNicknameInput = document.getElementById('popup-nickname');
 const popupNicknameCount = document.getElementById('popup-nickname-count');
+const popupCollectionInput = document.getElementById('popup-collection-id');
 const popupSaveBtn = document.getElementById('popup-save-btn');
+const photoCreditEl = document.getElementById('photo-credit');
+const photoCreditAuthorEl = document.getElementById('photo-credit-author');
+const todoBtn = document.getElementById('todo-btn');
+const todoCountBadge = document.getElementById('todo-count');
+const todoPopup = document.getElementById('todo-popup');
+const todoListEl = document.getElementById('todo-list');
+const todoInput = document.getElementById('todo-input');
+const todoAddBtn = document.getElementById('todo-add-btn');
 
 // ── Clock & Greeting ─────────────────────────────────────────────────────────
 
@@ -86,7 +100,13 @@ function startClock() {
 
 function getCachedPhotos() {
   try {
-    return JSON.parse(localStorage.getItem('cached_photos')) || null;
+    const data = JSON.parse(localStorage.getItem('cached_photos'));
+    if (!data || !data.length) return null;
+    // Backward compat: old format was a plain string[]
+    if (typeof data[0] === 'string') {
+      return data.map((url) => ({ url, author: null, authorUrl: null }));
+    }
+    return data;
   } catch {
     return null;
   }
@@ -108,12 +128,26 @@ async function fetchPhotos() {
   const apiKey = localStorage.getItem('unsplash_api_key') || '';
   if (!apiKey) throw new Error('No API key');
 
-  const url = `${UNSPLASH_ENDPOINT}?count=${PHOTO_COUNT}&client_id=${encodeURIComponent(apiKey)}`;
+  const collectionId = (localStorage.getItem('unsplash_collection_id') || '').trim();
+  let url;
+  if (collectionId) {
+    url = `${UNSPLASH_COLLECTION_ENDPOINT}/${encodeURIComponent(collectionId)}/photos` +
+          `?page=1&per_page=${COLLECTION_PHOTO_COUNT}&order_by=latest&client_id=${encodeURIComponent(apiKey)}`;
+  } else {
+    url = `${UNSPLASH_ENDPOINT}?count=${PHOTO_COUNT}&client_id=${encodeURIComponent(apiKey)}`;
+  }
+
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Unsplash error ${res.status}`);
 
   const data = await res.json();
-  return data.map((p) => p.urls.raw + IMG_PARAMS);
+  return data.map((p) => ({
+    url: p.urls.raw + IMG_PARAMS,
+    author: p.user?.name || null,
+    authorUrl: p.user?.links?.html
+      ? `${p.user.links.html}?utm_source=freshstart&utm_medium=referral`
+      : null,
+  }));
 }
 
 async function getPhotos() {
@@ -139,17 +173,30 @@ async function getPhotos() {
 
 // ── Photo display ────────────────────────────────────────────────────────────
 
-function showPhoto(url) {
+/** Updates the photographer credit overlay. Hides it when author is unknown. */
+function updatePhotoCredit(author, authorUrl) {
+  if (!author) {
+    photoCreditEl.hidden = true;
+    return;
+  }
+  photoCreditAuthorEl.textContent = author;
+  photoCreditAuthorEl.href = authorUrl || 'https://unsplash.com/?utm_source=freshstart&utm_medium=referral';
+  photoCreditEl.hidden = false;
+}
+
+/** Displays a photo object {url, author, authorUrl} as the background. */
+function showPhoto(photo) {
   const img = new Image();
   img.onload = () => {
-    bgEl.style.backgroundImage = `url("${url}")`;
+    bgEl.style.backgroundImage = `url("${photo.url}")`;
     bgEl.classList.add('loaded');
+    updatePhotoCredit(photo.author, photo.authorUrl);
   };
   img.onerror = () => {
-    // If image fails, still show (CSS gradient will show)
     bgEl.classList.add('loaded');
+    updatePhotoCredit(null, null);
   };
-  img.src = url;
+  img.src = photo.url;
 }
 
 function getCurrentIndex() {
@@ -173,6 +220,7 @@ async function initPhoto() {
 function openSettingsPopup() {
   popupNicknameInput.value = localStorage.getItem('user_nickname') || '';
   popupNicknameCount.textContent = `${popupNicknameInput.value.trim().slice(0, 8).length}/8`;
+  popupCollectionInput.value = localStorage.getItem('unsplash_collection_id') || '';
   settingsPopup.hidden = false;
   popupNicknameInput.focus();
 }
@@ -184,6 +232,7 @@ function closeSettingsPopup() {
 settingsBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   if (settingsPopup.hidden) {
+    closeTodoPopup();
     openSettingsPopup();
   } else {
     closeSettingsPopup();
@@ -198,10 +247,33 @@ popupSaveBtn.addEventListener('click', () => {
   const nickname = popupNicknameInput.value.trim().slice(0, 8);
   localStorage.setItem('user_nickname', nickname);
   updateGreeting();
-  closeSettingsPopup();
+
+  const newCollectionId = popupCollectionInput.value.trim();
+  const oldCollectionId = localStorage.getItem('unsplash_collection_id') || '';
+  if (newCollectionId !== oldCollectionId) {
+    localStorage.setItem('unsplash_collection_id', newCollectionId);
+    // Clear photo cache so the next open fetches from the new collection
+    localStorage.removeItem('cached_photos');
+    localStorage.removeItem('last_refresh');
+    localStorage.setItem('current_photo_index', '0');
+    initPhoto();
+  }
+
+  popupSaveBtn.textContent = 'Saved ✓';
+  popupSaveBtn.disabled = true;
+  setTimeout(() => {
+    popupSaveBtn.textContent = 'Save';
+    popupSaveBtn.disabled = false;
+    closeSettingsPopup();
+  }, 800);
 });
 
 popupNicknameInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') popupSaveBtn.click();
+  if (e.key === 'Escape') closeSettingsPopup();
+});
+
+popupCollectionInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') popupSaveBtn.click();
   if (e.key === 'Escape') closeSettingsPopup();
 });
@@ -215,12 +287,147 @@ document.addEventListener('click', (e) => {
 
 // ── Buttons ──────────────────────────────────────────────────────────────────
 
-refreshBtn.addEventListener('click', async () => {
+refreshBtn.addEventListener('click', () => {
   const photos = getCachedPhotos() || FALLBACK_PHOTOS;
   bgEl.classList.remove('loaded');
   const next = advanceIndex(photos);
   // Small delay so the fade-out is visible
   setTimeout(() => showPhoto(photos[next]), 150);
+});
+
+// ── To-Do ─────────────────────────────────────────────────────────────────────
+
+function loadTodos() {
+  try {
+    return JSON.parse(localStorage.getItem('user_todos')) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveTodosData(todos) {
+  localStorage.setItem('user_todos', JSON.stringify(todos));
+}
+
+function updateTodoCount() {
+  const count = loadTodos().filter((t) => !t.completed).length;
+  todoCountBadge.textContent = count > 0 ? String(count) : '';
+  todoCountBadge.hidden = count === 0;
+}
+
+function createEditInput(li, todo) {
+  const span = li.querySelector('.todo-text');
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'todo-text-input';
+  input.value = todo.text;
+  input.maxLength = 200;
+  span.replaceWith(input);
+  input.focus();
+  input.select();
+
+  function commitEdit() {
+    const newText = input.value.trim();
+    if (newText && newText !== todo.text) {
+      saveTodosData(loadTodos().map((t) => t.id === todo.id ? { ...t, text: newText } : t));
+    }
+    renderTodos();
+  }
+
+  input.addEventListener('blur', commitEdit);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') {
+      e.stopPropagation(); // don't close the popup
+      input.removeEventListener('blur', commitEdit);
+      renderTodos();
+    }
+  });
+}
+
+function renderTodos() {
+  const todos = loadTodos();
+  todoListEl.innerHTML = '';
+  todos.forEach((todo) => {
+    const li = document.createElement('li');
+    li.className = 'todo-item';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'todo-checkbox';
+    checkbox.checked = todo.completed;
+    checkbox.addEventListener('change', () => {
+      saveTodosData(loadTodos().map((t) => t.id === todo.id ? { ...t, completed: checkbox.checked } : t));
+      updateTodoCount();
+      renderTodos();
+    });
+
+    const textSpan = document.createElement('span');
+    textSpan.className = 'todo-text' + (todo.completed ? ' todo-text--done' : '');
+    textSpan.textContent = todo.text;
+    textSpan.addEventListener('click', () => createEditInput(li, todo));
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.className = 'todo-delete-btn';
+    deleteBtn.textContent = '×';
+    deleteBtn.title = 'Delete task';
+    deleteBtn.addEventListener('click', () => {
+      saveTodosData(loadTodos().filter((t) => t.id !== todo.id));
+      updateTodoCount();
+      renderTodos();
+    });
+
+    li.append(checkbox, textSpan, deleteBtn);
+    todoListEl.appendChild(li);
+  });
+  updateTodoCount();
+}
+
+function addTodo(text) {
+  const trimmed = text.trim();
+  if (!trimmed) return;
+  const todos = loadTodos();
+  todos.push({ id: crypto.randomUUID(), text: trimmed, completed: false, created_at: Date.now() });
+  saveTodosData(todos);
+  renderTodos();
+}
+
+function openTodoPopup() {
+  renderTodos();
+  todoPopup.hidden = false;
+  todoInput.focus();
+}
+
+function closeTodoPopup() {
+  todoPopup.hidden = true;
+}
+
+todoBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (todoPopup.hidden) {
+    closeSettingsPopup();
+    openTodoPopup();
+  } else {
+    closeTodoPopup();
+  }
+});
+
+todoAddBtn.addEventListener('click', () => {
+  addTodo(todoInput.value);
+  todoInput.value = '';
+  todoInput.focus();
+});
+
+todoInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { addTodo(todoInput.value); todoInput.value = ''; }
+  if (e.key === 'Escape') closeTodoPopup();
+});
+
+document.addEventListener('click', (e) => {
+  if (!todoPopup.hidden && !todoPopup.contains(e.target) && !todoBtn.contains(e.target)) {
+    closeTodoPopup();
+  }
 });
 
 // ── Weather ───────────────────────────────────────────────────────────────────
@@ -369,3 +576,4 @@ async function initWeather() {
 startClock();
 initPhoto();
 initWeather();
+updateTodoCount();
