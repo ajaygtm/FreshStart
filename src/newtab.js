@@ -8,6 +8,7 @@
  *   user_nickname           User's display name (max 8 chars)
  *   unsplash_api_key        Unsplash access key
  *   unsplash_collection_id  Optional Unsplash collection ID
+ *   pexels_collection_id    Optional Pexels collection ID
  *   user_location           {latitude, longitude} from Geolocation API
  *   cached_weather          {temperature, weather_code, location_name}
  *   last_weather_update     Unix timestamp (ms) of last weather fetch
@@ -26,14 +27,16 @@ const UNSPLASH_ENDPOINT = 'https://api.unsplash.com/photos/random';
 const UNSPLASH_COLLECTION_ENDPOINT = 'https://api.unsplash.com/collections';
 const COLLECTION_PHOTO_COUNT = 20;
 const IMG_PARAMS = '?w=1920&h=1080&fit=crop';
+const PEXELS_COLLECTION_ENDPOINT = 'https://api.pexels.com/v1/collections';
 const OPEN_METEO_ENDPOINT = 'https://api.open-meteo.com/v1/forecast';
 const REVERSE_GEOCODE_ENDPOINT = 'https://api.bigdatacloud.net/data/reverse-geocode-client';
 
 // Each photo is stored as {url, author, authorUrl} – author/authorUrl are null for fallbacks
 const FALLBACK_PHOTOS = [
-  { url: 'https://images.unsplash.com/photo-1470770841072-f978cf4d019e' + IMG_PARAMS, author: null, authorUrl: null },
-  { url: 'https://images.unsplash.com/photo-1501854140801-50d01698950b' + IMG_PARAMS, author: null, authorUrl: null },
-  { url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e' + IMG_PARAMS, author: null, authorUrl: null },
+  { url: 'https://images.pexels.com/photos/1366919/pexels-photo-1366919.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop', author: null, authorUrl: null },
+  { url: 'https://images.pexels.com/photos/1761279/pexels-photo-1761279.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop', author: null, authorUrl: null },
+  { url: 'https://images.pexels.com/photos/1323550/pexels-photo-1323550.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop', author: null, authorUrl: null },
+  { url: 'https://images.pexels.com/photos/355465/pexels-photo-355465.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop', author: null, authorUrl: null },
 ];
 
 // ── DOM references ───────────────────────────────────────────────────────────
@@ -48,6 +51,7 @@ const settingsPopup = document.getElementById('settings-popup');
 const popupNicknameInput = document.getElementById('popup-nickname');
 const popupNicknameCount = document.getElementById('popup-nickname-count');
 const popupCollectionInput = document.getElementById('popup-collection-id');
+const popupPexelsCollectionInput = document.getElementById('popup-pexels-collection-id');
 const popupSaveBtn = document.getElementById('popup-save-btn');
 const photoCreditEl = document.getElementById('photo-credit');
 const photoCreditAuthorEl = document.getElementById('photo-credit-author');
@@ -150,6 +154,45 @@ async function fetchPhotos() {
   }));
 }
 
+// Keep fetchUnsplashPhotos as an alternative function (not called by default)
+function fetchUnsplashPhotos() {
+  return fetchPhotos();
+}
+
+/** Returns the 4 default Pexels fallback wallpapers. */
+function useFallbackWallpapers() {
+  return FALLBACK_PHOTOS;
+}
+
+/** Fetches photos from a Pexels collection. Falls back to default wallpapers on error. */
+async function fetchPexelsPhotos() {
+  const collectionId = (localStorage.getItem('pexels_collection_id') || '').trim();
+  if (!collectionId) {
+    return useFallbackWallpapers();
+  }
+
+  try {
+    const res = await fetch(
+      `${PEXELS_COLLECTION_ENDPOINT}/${encodeURIComponent(collectionId)}/photos?page=1&per_page=${COLLECTION_PHOTO_COUNT}`
+    );
+    if (!res.ok) throw new Error(`Pexels error ${res.status}`);
+
+    const data = await res.json();
+    if (!data.photos || data.photos.length === 0) {
+      return useFallbackWallpapers();
+    }
+
+    return data.photos.map((p) => ({
+      url: p.src.large,
+      author: p.photographer || null,
+      authorUrl: p.photographer_url || null,
+    }));
+  } catch (err) {
+    console.warn('Fresh Start: could not fetch Pexels photos, using fallbacks.', err);
+    return useFallbackWallpapers();
+  }
+}
+
 async function getPhotos() {
   if (isCacheValid()) {
     const cached = getCachedPhotos();
@@ -157,7 +200,7 @@ async function getPhotos() {
   }
 
   try {
-    const photos = await fetchPhotos();
+    const photos = await fetchPexelsPhotos();
     saveCache(photos);
     return photos;
   } catch (err) {
@@ -221,6 +264,7 @@ function openSettingsPopup() {
   popupNicknameInput.value = localStorage.getItem('user_nickname') || '';
   popupNicknameCount.textContent = `${popupNicknameInput.value.trim().slice(0, 8).length}/8`;
   popupCollectionInput.value = localStorage.getItem('unsplash_collection_id') || '';
+  popupPexelsCollectionInput.value = localStorage.getItem('pexels_collection_id') || '';
   settingsPopup.hidden = false;
   popupNicknameInput.focus();
 }
@@ -248,15 +292,21 @@ popupSaveBtn.addEventListener('click', () => {
   localStorage.setItem('user_nickname', nickname);
   updateGreeting();
 
-  const newCollectionId = popupCollectionInput.value.trim();
-  const oldCollectionId = localStorage.getItem('unsplash_collection_id') || '';
-  if (newCollectionId !== oldCollectionId) {
-    localStorage.setItem('unsplash_collection_id', newCollectionId);
+  const newPexelsCollectionId = popupPexelsCollectionInput.value.trim();
+  const oldPexelsCollectionId = localStorage.getItem('pexels_collection_id') || '';
+  if (newPexelsCollectionId !== oldPexelsCollectionId) {
+    localStorage.setItem('pexels_collection_id', newPexelsCollectionId);
     // Clear photo cache so the next open fetches from the new collection
     localStorage.removeItem('cached_photos');
     localStorage.removeItem('last_refresh');
     localStorage.setItem('current_photo_index', '0');
     initPhoto();
+  }
+
+  const newCollectionId = popupCollectionInput.value.trim();
+  const oldCollectionId = localStorage.getItem('unsplash_collection_id') || '';
+  if (newCollectionId !== oldCollectionId) {
+    localStorage.setItem('unsplash_collection_id', newCollectionId);
   }
 
   popupSaveBtn.textContent = 'Saved ✓';
@@ -274,6 +324,11 @@ popupNicknameInput.addEventListener('keydown', (e) => {
 });
 
 popupCollectionInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') popupSaveBtn.click();
+  if (e.key === 'Escape') closeSettingsPopup();
+});
+
+popupPexelsCollectionInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') popupSaveBtn.click();
   if (e.key === 'Escape') closeSettingsPopup();
 });
