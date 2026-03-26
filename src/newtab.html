@@ -18,6 +18,30 @@
   <button id="settings-btn" class="icon-btn settings-btn" title="Settings">⚙️</button>
   <button id="refresh-btn" class="icon-btn refresh-btn" title="Refresh photo">🔄</button>
 
+  <!-- To-Do indicator button -->
+  <button id="todo-btn" class="icon-btn todo-btn" title="To-Do List">
+    📝<span id="todo-count" class="todo-count-badge" hidden></span>
+  </button>
+
+  <!-- To-Do popup -->
+  <div id="todo-popup" class="todo-popup" hidden>
+    <div class="todo-popup-inner">
+      <p class="todo-title">To-Do</p>
+      <ul id="todo-list" class="todo-list"></ul>
+      <div class="todo-add-row">
+        <input
+          type="text"
+          id="todo-input"
+          class="popup-input"
+          placeholder="Add a task…"
+          maxlength="200"
+          autocomplete="off"
+        />
+        <button id="todo-add-btn" class="todo-add-btn" type="button">+</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Settings dropdown popup -->
   <div id="settings-popup" class="settings-popup" hidden>
     <div class="settings-popup-inner">
@@ -33,9 +57,26 @@
         />
         <span id="popup-nickname-count" class="popup-char-count">0/8</span>
       </div>
+      <label for="popup-collection-id" class="popup-label">Unsplash Collection ID</label>
+      <div class="popup-input-row">
+        <input
+          type="text"
+          id="popup-collection-id"
+          class="popup-input"
+          placeholder="e.g. 12345678"
+          autocomplete="off"
+        />
+      </div>
+      <p class="popup-hint">Leave empty for default wallpapers</p>
       <button id="popup-save-btn" class="popup-save-btn" type="button">Save</button>
     </div>
   </div>
+
+  <!-- Photo credit (Unsplash attribution) -->
+  <p id="photo-credit" class="photo-credit" hidden aria-label="Photo credit">
+    📷 <a id="photo-credit-author" class="photo-credit-link" target="_blank" rel="noopener noreferrer"></a>
+    on <a class="photo-credit-link" href="https://unsplash.com/?utm_source=freshstart&utm_medium=referral" target="_blank" rel="noopener noreferrer">Unsplash</a>
+  </p>
 
   <script src="newtab.js"></script>
 </body>
